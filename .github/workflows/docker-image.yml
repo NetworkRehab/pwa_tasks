@@ -27,11 +27,18 @@ jobs:
 
       - name: Determine Docker tag
         id: get_tag
-        run: echo "tag=$(if [[ '${{ github.ref }}' == 'refs/heads/main' ]]; then echo 'latest'; elif [[ '${{ github.ref }}' == refs/heads/prerelease-* ]]; then echo 'prerelease'; else echo 'latest'; fi)" >> $GITHUB_ENV
+        run: |
+          if [ "${GITHUB_REF}" == "refs/heads/main" ]; then
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          elif [[ "${GITHUB_REF}" == refs/heads/prerelease-* ]]; then
+            echo "tag=prerelease" >> $GITHUB_OUTPUT
+          else
+            echo "tag=prerelease" >> $GITHUB_OUTPUT
+          fi
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ghcr.io/${{ github.repository }}/pwa_tasks:${{ steps.get_tag.outputs.tag }}
+          tags: ghcr.io/${{ github.repository }}/pwa_tasks:${{ steps.get_tag.outputs.tag || 'prerelease' }}
