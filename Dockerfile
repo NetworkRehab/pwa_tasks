@@ -9,6 +9,7 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 3000
+# Ensure server.js is in the root directory
+CMD ["node", "server.js"]
 
-CMD ["npm", "start"]
+EXPOSE 3000
