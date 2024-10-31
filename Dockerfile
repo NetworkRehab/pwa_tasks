@@ -1,15 +1,13 @@
 # Dockerfile
-FROM node:16
+FROM python:3.9-slim
 
 WORKDIR /app
 
-COPY package*.json ./
-
-RUN npm install
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Ensure server.js is in the root directory
-CMD ["node", "server.js"]
+CMD ["python", "app.py"]
 
-EXPOSE 3000
+EXPOSE 5000
