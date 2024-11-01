@@ -22,9 +22,18 @@ class Task(db.Model):
     def __repr__(self):
         return f"<Task {self.name}>"
 
+class PointsBank(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    total_points = db.Column(db.Integer, default=0)
+
 # Create the database and tables
 with app.app_context():
     db.create_all()
+    # Initialize PointsBank if it doesn't exist
+    if not PointsBank.query.first():
+        bank = PointsBank(total_points=0)
+        db.session.add(bank)
+        db.session.commit()
 
 @app.route('/')
 def index():
@@ -38,7 +47,9 @@ def index():
             date_str = task.completed_at.split(' ')[0]  # Extract MM-DD-YYYY
             totals_per_day[date_str] += task.points
     
-    return render_template('index.html', tasks=tasks, completed_tasks=completed_tasks, totals_per_day=totals_per_day)
+    bank = PointsBank.query.first()
+    bank_total = bank.total_points if bank else 0
+    return render_template('index.html', tasks=tasks, completed_tasks=completed_tasks, totals_per_day=totals_per_day, bank_total=bank_total)
 
 @app.route('/add', methods=['POST'])
 def add():
@@ -76,6 +87,30 @@ def clear_tasks():
     Task.query.delete()
     db.session.commit()
     return '', 204  # No Content
+
+@app.route('/add_to_bank', methods=['POST'])
+def add_to_bank():
+    amount = request.form.get('amount', 0)
+    try:
+        amount = int(amount)
+    except ValueError:
+        amount = 0
+    bank = PointsBank.query.first()
+    bank.total_points += amount
+    db.session.commit()
+    return redirect(url_for('index'))
+
+@app.route('/remove_from_bank', methods=['POST'])
+def remove_from_bank():
+    amount = request.form.get('amount', 0)
+    try:
+        amount = int(amount)
+    except ValueError:
+        amount = 0
+    bank = PointsBank.query.first()
+    bank.total_points -= amount
+    db.session.commit()
+    return redirect(url_for('index'))
 
 if __name__ == '__main__':
     import os
