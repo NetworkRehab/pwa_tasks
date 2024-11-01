@@ -156,6 +156,16 @@
     <button onclick="resetSliders()">Reset</button>
     <button onclick="clearTasks()">Clear</button>
 
+    <h2>Points Bank: {{ bank_total }}</h2>
+    <form action="/add_to_bank" method="post" style="display:inline-block;">
+        <input type="number" name="amount" placeholder="Amount to Add">
+        <input type="submit" value="Add to Bank">
+    </form>
+    <form action="/remove_from_bank" method="post" style="display:inline-block;">
+        <input type="number" name="amount" placeholder="Amount to Remove">
+        <input type="submit" value="Remove from Bank">
+    </form>
+
     <h2>Completed Tasks</h2>
     <div class="completed-tasks-container">
         <table class="completed-tasks">
