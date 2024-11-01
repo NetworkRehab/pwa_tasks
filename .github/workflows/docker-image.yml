@@ -1,5 +1,5 @@
 # .github/workflows/docker-image.yml
-name: Build and Push Docker Image
+name: Build, Test, and Push Docker Image
 
 on:
   push:
@@ -42,6 +42,19 @@ jobs:
           else
             echo "tag=prerelease" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: |
+          python -m unittest discover tests
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v4

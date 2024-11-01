@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -5,8 +6,22 @@ from collections import defaultdict
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
+# Build the absolute path to the data directory
+basedir = os.path.abspath(os.path.dirname(__file__))
+data_dir = os.path.join(basedir, 'data')
+
+# Ensure the data directory exists
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
 # Configure SQLite database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+if app.config.get('TESTING'):
+    # Use in-memory database for testing
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+else:
+    # Use absolute path to the database file
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(data_dir, 'tasks.db')
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -22,9 +37,21 @@ class Task(db.Model):
     def __repr__(self):
         return f"<Task {self.name}>"
 
+
 class PointsBank(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     total_points = db.Column(db.Integer, default=0)
+
+class CompletedTask(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    completed_at = db.Column(db.String(50), nullable=True)
+    points = db.Column(db.Integer, default=0)
+
+    def __repr__(self):
+        return f"<CompletedTask {self.name} at {self.completed_at}>"
+
 
 # Create the database and tables
 with app.app_context():
@@ -38,13 +65,14 @@ with app.app_context():
 @app.route('/')
 def index():
     tasks = Task.query.all()
-    completed_tasks = Task.query.filter_by(completed=True).all()
-    
+    # Fetch all completed tasks from CompletedTask table
+    completed_tasks = CompletedTask.query.order_by(CompletedTask.id.desc()).all()
+
     # Calculate total points per day
     totals_per_day = defaultdict(int)
     for task in completed_tasks:
         if task.completed_at:
-            date_str = task.completed_at.split(' ')[0]  # Extract MM-DD-YYYY
+            date_str = task.completed_at.split(' ')[0]
             totals_per_day[date_str] += task.points
     
     bank = PointsBank.query.first()
@@ -64,10 +92,20 @@ def toggle_task(task_id):
     task = Task.query.get_or_404(task_id)
     task.completed = not task.completed
     if task.completed:
-        # Format the date as MM-DD-YYYY and time as HH:MM AM/PM
+        # Mark task as completed
         task.completed_at = datetime.now().strftime("%m-%d-%Y %I:%M %p")
+        # Log the completion event
+        completed_task = CompletedTask(
+            task_id=task.id,
+            name=task.name,
+            completed_at=task.completed_at,
+            points=task.points
+        )
+        db.session.add(completed_task)
     else:
+        # Unmark task as completed
         task.completed_at = None
+        # Do not remove entries from CompletedTask
     db.session.commit()
     return redirect(url_for('index'))
 
@@ -111,6 +149,13 @@ def remove_from_bank():
     bank.total_points -= amount
     db.session.commit()
     return redirect(url_for('index'))
+
+@app.route('/delete_completed_task/<int:task_id>', methods=['POST'])
+def delete_completed_task(task_id):
+    completed_task = CompletedTask.query.get_or_404(task_id)
+    db.session.delete(completed_task)
+    db.session.commit()
+    return '', 204  # No Content
 
 if __name__ == '__main__':
     import os
