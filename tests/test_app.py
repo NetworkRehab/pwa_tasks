@@ -1,4 +1,5 @@
 import unittest
+
 from app import app, db, Task, CompletedTask
 
 class AppTestCase(unittest.TestCase):
@@ -29,7 +30,9 @@ class AppTestCase(unittest.TestCase):
         self.assertIn(b'Test Task', response.data)
     
     def test_toggle_task(self):
+
         # Test toggling a task's completion status and logging it
+
         with app.app_context():
             task = Task(name='Test Task')
             db.session.add(task)
@@ -59,6 +62,7 @@ class AppTestCase(unittest.TestCase):
             # CompletedTask entry should still exist
             completed_tasks = CompletedTask.query.filter_by(task_id=task_id).all()
             self.assertEqual(len(completed_tasks), 1)
+
     
     def test_update_points(self):
         # Test updating a task's points
