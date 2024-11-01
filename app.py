@@ -103,6 +103,13 @@ def clear_tasks():
     db.session.commit()
     return '', 204  # No Content
 
+@app.route('/delete_completed_task/<int:task_id>', methods=['POST'])
+def delete_completed_task(task_id):
+    completed_task = CompletedTask.query.get_or_404(task_id)
+    db.session.delete(completed_task)
+    db.session.commit()
+    return '', 204  # No Content
+
 if __name__ == '__main__':
     import os
     debug_mode = os.getenv('FLASK_DEBUG', 'False').lower() in ['true', '1', 't']
