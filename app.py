@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
@@ -5,12 +6,21 @@ from collections import defaultdict
 
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
+# Build the absolute path to the data directory
+basedir = os.path.abspath(os.path.dirname(__file__))
+data_dir = os.path.join(basedir, 'data')
+
+# Ensure the data directory exists
+if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+
 # Configure SQLite database
 if app.config.get('TESTING'):
     # Use in-memory database for testing
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 else:
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+    # Use absolute path to the database file
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(data_dir, 'tasks.db')
 
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
