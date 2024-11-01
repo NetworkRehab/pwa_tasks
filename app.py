@@ -27,6 +27,16 @@ class Task(db.Model):
     def __repr__(self):
         return f"<Task {self.name}>"
 
+class CompletedTask(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, nullable=False)
+    name = db.Column(db.String(200), nullable=False)
+    completed_at = db.Column(db.String(50), nullable=True)
+    points = db.Column(db.Integer, default=0)
+
+    def __repr__(self):
+        return f"<CompletedTask {self.name} at {self.completed_at}>"
+
 # Create the database and tables
 with app.app_context():
     db.create_all()
@@ -34,15 +44,16 @@ with app.app_context():
 @app.route('/')
 def index():
     tasks = Task.query.all()
-    completed_tasks = Task.query.filter_by(completed=True).all()
-    
+    # Fetch all completed tasks from CompletedTask table
+    completed_tasks = CompletedTask.query.order_by(CompletedTask.id.desc()).all()
+
     # Calculate total points per day
     totals_per_day = defaultdict(int)
     for task in completed_tasks:
         if task.completed_at:
-            date_str = task.completed_at.split(' ')[0]  # Extract MM-DD-YYYY
+            date_str = task.completed_at.split(' ')[0]
             totals_per_day[date_str] += task.points
-    
+
     return render_template('index.html', tasks=tasks, completed_tasks=completed_tasks, totals_per_day=totals_per_day)
 
 @app.route('/add', methods=['POST'])
@@ -58,10 +69,20 @@ def toggle_task(task_id):
     task = Task.query.get_or_404(task_id)
     task.completed = not task.completed
     if task.completed:
-        # Format the date as MM-DD-YYYY and time as HH:MM AM/PM
+        # Mark task as completed
         task.completed_at = datetime.now().strftime("%m-%d-%Y %I:%M %p")
+        # Log the completion event
+        completed_task = CompletedTask(
+            task_id=task.id,
+            name=task.name,
+            completed_at=task.completed_at,
+            points=task.points
+        )
+        db.session.add(completed_task)
     else:
+        # Unmark task as completed
         task.completed_at = None
+        # Do not remove entries from CompletedTask
     db.session.commit()
     return redirect(url_for('index'))
 
