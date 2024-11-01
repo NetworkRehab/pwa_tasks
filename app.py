@@ -6,7 +6,12 @@ from collections import defaultdict
 app = Flask(__name__, static_folder='static', template_folder='templates')
 
 # Configure SQLite database
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+if app.config.get('TESTING'):
+    # Use in-memory database for testing
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+else:
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
